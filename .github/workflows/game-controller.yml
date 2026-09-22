@@ -22,12 +22,26 @@ jobs:
             const issueNumber = context.issue.number;
             const body = context.payload.comment.body.trim();
             const submittedBy = context.payload.comment.user.login;
+            const commentId = context.payload.comment.id;
+            const isTesting = /(^|\n)TESTING\b/i.test(context.payload.comment.body);
+
+            async function cleanupTestingComment() {
+              if (!isTesting) return;
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: commentId
+              });
+            }
 
             const gameIssues = { 1: 1, 2: 2, 3: 3 };
             const issueToGame = { 1: 1, 2: 2, 3: 3 };
 
             const game = issueToGame[issueNumber];
-            if (!game) return;
+            if (!game) {
+              await cleanupTestingComment();
+              return;
+            }
 
             const answer = body.slice('/answer '.length).split(/\r?\n/)[0].trim();
 
@@ -58,6 +72,7 @@ jobs:
                 issue_number: issueNumber,
                 body: `❌ Complete Game 1 first, ${submittedBy}.`
               });
+              await cleanupTestingComment();
               return;
             }
 
@@ -68,6 +83,7 @@ jobs:
                 issue_number: issueNumber,
                 body: `❌ Complete Game 2 first, ${submittedBy}.`
               });
+              await cleanupTestingComment();
               return;
             }
 
@@ -82,6 +98,7 @@ jobs:
                   issue_number: issueNumber,
                   body: `❌ Please include a valid commit link on the next line, like:\n\`Commit: https://github.com/your-username/your-repo/commit/<sha>\``
                 });
+                await cleanupTestingComment();
                 return;
               }
 
@@ -100,6 +117,7 @@ jobs:
                     issue_number: issueNumber,
                     body: `❌ The linked commit does not contain final-answer.txt, ${submittedBy}.`
                   });
+                  await cleanupTestingComment();
                   return;
                 }
               } catch (error) {
@@ -109,6 +127,7 @@ jobs:
                   issue_number: issueNumber,
                   body: `❌ I could not verify that commit link. Make sure the repository and commit are public and the URL is correct.`
                 });
+                await cleanupTestingComment();
                 return;
               }
             }
@@ -120,6 +139,7 @@ jobs:
                 issue_number: issueNumber,
                 body: `❌ Not quite, ${submittedBy}. Check the challenge and try again.`
               });
+              await cleanupTestingComment();
               return;
             }
 
@@ -143,6 +163,8 @@ jobs:
                 body: `✅ Correct, ${submittedBy}! Game ${game} complete.\n\n${marker}\n\n➡️ Game ${nextGame} is now unlocked: #${nextIssue}`
               });
             }
+
+            await cleanupTestingComment();
         env:
           GAME1_ANSWER: ${{ secrets.GAME1_ANSWER }}
           GAME2_ANSWER: ${{ secrets.GAME2_ANSWER }}
