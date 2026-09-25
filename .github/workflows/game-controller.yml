@@ -143,6 +143,7 @@ jobs:
             const marker = `<!-- ISSUES-GAME4-PASS game=${game} user=${submittedBy} -->`;
 
             if (game === 3) {
+              await deleteSubmission();
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -153,15 +154,14 @@ jobs:
               const nextGame = game + 1;
               const nextIssue = gameIssues[nextGame];
 
+              await deleteSubmission();
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issueNumber,
-                body: `✅ Correct, ${submittedBy}! Game ${game} complete.\n\n${marker}\n\n➡️ Game ${nextGame} is now unlocked: #${nextIssue}`
+                body: `✅ Correct, ${submittedBy}! Game ${game} complete.\n\n${marker}\n\n🔓 **Game ${nextGame} is now unlocked!**\n\n👉 [**Go to Game ${nextGame}**](https://github.com/${context.repo.owner}/${context.repo.repo}/issues/${nextIssue})`
               });
             }
-
-            await deleteSubmission();
         env:
           GAME1_ANSWER: ${{ secrets.GAME1_ANSWER }}
           GAME2_ANSWER: ${{ secrets.GAME2_ANSWER }}
